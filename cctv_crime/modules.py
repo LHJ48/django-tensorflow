@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import json
 import googlemaps
-
+from sklearn import preprocessing
 
 @dataclass
 class File(object):
@@ -243,6 +243,35 @@ class Service(Reader):
                                     [-0.13607433  1.        ]]                        
          """
         cctv_pop.to_csv('./saved_data/cctv_pop.csv')
+
+    def save_police_norm(self):
+        file = self.file
+        reader = self.reader
+        printer = self.printer
+        file.context = './saved_data/'
+        file.fname = 'police_pos'
+        police_pos = reader.csv(file)
+        police = pd.pivot_table(police_pos, index='구별', aggfunc=np.sum)
+        police['살인검거율'] = (police['살인 검거'].astype(int) / police['살인 발생'].astype(int)) * 100
+        police['강도검거율'] = (police['강도 검거'].astype(int) / police['강도 발생'].astype(int)) * 100
+        police['강간검거율'] = (police['강간 검거'].astype(int) / police['강간 발생'].astype(int)) * 100
+        police['절도검거율'] = (police['절도 검거'].astype(int) / police['절도 발생'].astype(int)) * 100
+        police['폭력검거율'] = (police['폭력 검거'].astype(int) / police['폭력 발생'].astype(int)) * 100
+        police.drop(columns={'살인 검거', '강도 검거', '강간 검거', '절도 검거', '폭력 검거'}, axis=1, inplace=True)
+        for i in self.crime_rate_columns:
+            police.loc[police[i] > 100, 1] = 100  # 데이터값의 기간 오류로 100을 넘으면 100으로 계산
+        police.rename(columns={
+            '살인 발생': '살인',
+            '강도 발생': '강도',
+            '강간 발생': '강간',
+            '절도 발생': '절도',
+            '폭력 발생': '폭력'
+        }, inplace=True)
+
+        x = police[self.crime_rate_columns].values
+        min_max_scalar = preprocessing.MinMaxScaler
+
+
 
 if __name__ == '__main__':
 
